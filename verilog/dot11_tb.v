@@ -51,6 +51,7 @@ integer conv_out_fd;
 integer descramble_out_fd;
 
 integer signal_fd;
+integer ht_signal_fd;
 
 integer byte_out_fd;
 integer fcs_out_fd;
@@ -139,6 +140,7 @@ always @(posedge clock) begin
         descramble_out_fd = $fopen("./descramble_out.txt", "w");
 
         signal_fd = $fopen("./signal_out.txt", "w");
+        ht_signal_fd = $fopen("./ht_signal_out.txt", "w");
 
         byte_out_fd = $fopen("./byte_out.txt", "w");
 
@@ -269,6 +271,7 @@ always @(posedge clock) begin
                 $fclose(descramble_out_fd);
 
                 $fclose(signal_fd);
+                $fclose(ht_signal_fd);
                 $fclose(byte_out_fd);
                 $fclose(fcs_out_fd);    
                 $finish;
@@ -295,8 +298,13 @@ always @(posedge clock) begin
 
         if (dot11_inst.legacy_sig_stb) begin
             signal_done <= 1;
-            $fwrite(signal_fd, "%04b %b %012b %b %06b", dot11_inst.legacy_rate, dot11_inst.legacy_sig_rsvd, dot11_inst.legacy_len, dot11_inst.legacy_sig_parity, dot11_inst.legacy_sig_tail);
+            $fwrite(signal_fd, "rate=%04b rsvd=%b len=%012b parity=%b tail=%06b", dot11_inst.legacy_rate, dot11_inst.legacy_sig_rsvd, dot11_inst.legacy_len, dot11_inst.legacy_sig_parity, dot11_inst.legacy_sig_tail);
             $fflush(signal_fd);
+        end
+
+        if (dot11_inst.ht_sig_stb) begin
+            $fwrite(ht_signal_fd, "mcs=%07b cbw=%b len=%016b smoothing=%b not_sounding=%b aggr=%b stbc=%02b fec_coding=%b sgi=%b num_ext=%02b crc_ok=%b", dot11_inst.ht_mcs, dot11_inst.ht_cbw, dot11_inst.ht_len, dot11_inst.ht_smoothing, dot11_inst.ht_not_sounding, dot11_inst.ht_aggr, dot11_inst.ht_stbc, dot11_inst.ht_fec_coding, dot11_inst.ht_sgi, dot11_inst.ht_num_ext, dot11_inst.ht_sig_crc_ok);
+            $fflush(ht_signal_fd);
         end
 
         if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.ofdm_decoder_inst.demod_out_strobe) begin
